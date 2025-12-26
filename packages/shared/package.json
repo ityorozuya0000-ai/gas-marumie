@@ -1,0 +1,8 @@
+{
+    "name": "@marumie/shared",
+    "version": "1.0.0",
+    "main": "src/index.ts",
+    "scripts": {
+        "build": "echo 'Shared package built'"
+    }
+}

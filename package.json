@@ -1,0 +1,14 @@
+{
+    "name": "gas-marumie-monorepo",
+    "private": true,
+    "workspaces": [
+        "apps/*",
+        "packages/*"
+    ],
+    "scripts": {
+        "build:public": "npm run build -w apps/public",
+        "build:admin": "npm run build -w apps/admin",
+        "push:public": "cd apps/public && npx clasp push",
+        "push:admin": "cd apps/admin && npx clasp push"
+    }
+}

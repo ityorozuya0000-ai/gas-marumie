@@ -1,8 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { createRoot } from 'react-dom/client';
 import { AppData, Transaction, Category } from '@marumie/shared';
-// Remove recharts imports
-// import { ... } from 'recharts';
+import { MonthlyBalanceChart } from './components/MonthlyBalanceChart';
 
 // --- Mocks ---
 const runGoogleScript = (name: string, args: any[] = []): Promise<any> => {
@@ -28,68 +27,6 @@ const runGoogleScript = (name: string, args: any[] = []): Promise<any> => {
 
 // --- Helper Components ---
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
-
-/**
- * Simple SVG Bar Chart for Monthly Income/Expense
- */
-const SimpleBarChart = ({ data }: { data: { month: string; income: number; expense: number }[] }) => {
-    if (!data || data.length === 0) return <div className="h-full flex items-center justify-center text-slate-400">データがありません</div>;
-
-    const height = 300;
-    const width = 600;
-    const padding = 40;
-    const chartHeight = height - padding * 2;
-    const chartWidth = width - padding * 2;
-
-    const maxVal = Math.max(...data.map(d => Math.max(d.income, d.expense)), 1000) * 1.1; // 10% buffering
-    const barSlotWidth = chartWidth / data.length;
-    const barWidth = Math.min(barSlotWidth * 0.35, 30); // Max bar width 30px
-
-    return (
-        <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full" preserveAspectRatio="none">
-            {/* Grid Lines */}
-            {[0, 0.25, 0.5, 0.75, 1].map((tick) => {
-                const y = height - padding - (chartHeight * tick);
-                const val = Math.round(maxVal * tick);
-                return (
-                    <g key={tick}>
-                        <line x1={padding} y1={y} x2={width - padding} y2={y} stroke="#e2e8f0" strokeDasharray="4 4" />
-                        <text x={padding - 5} y={y + 4} fontSize="10" textAnchor="end" fill="#94a3b8">
-                            {val >= 10000 ? `${(val / 10000).toFixed(1)}万` : val}
-                        </text>
-                    </g>
-                );
-            })}
-
-            {/* Axis Lines */}
-            <line x1={padding} y1={height - padding} x2={width - padding} y2={height - padding} stroke="#cbd5e1" />
-            <line x1={padding} y1={padding} x2={padding} y2={height - padding} stroke="#cbd5e1" />
-
-            {/* Bars */}
-            {data.map((d, i) => {
-                const xIn = padding + (barSlotWidth * i) + (barSlotWidth / 2) - barWidth;
-                const xEx = padding + (barSlotWidth * i) + (barSlotWidth / 2);
-
-                const hIn = (d.income / maxVal) * chartHeight;
-                const hEx = (d.expense / maxVal) * chartHeight;
-
-                return (
-                    <g key={i} className="group">
-                        <title>{`${d.month}\n収入: ¥${d.income.toLocaleString()}\n支出: ¥${d.expense.toLocaleString()}`}</title>
-                        {/* Income Bar */}
-                        <rect x={xIn} y={height - padding - hIn} width={barWidth} height={hIn} fill="#3b82f6" rx="2" />
-                        {/* Expense Bar */}
-                        <rect x={xEx} y={height - padding - hEx} width={barWidth} height={hEx} fill="#f43f5e" rx="2" />
-                        {/* X Label */}
-                        <text x={padding + (barSlotWidth * i) + (barSlotWidth / 2)} y={height - padding + 20} fontSize="11" textAnchor="middle" fill="#64748b">
-                            {d.month.split('-')[1]}月
-                        </text>
-                    </g>
-                );
-            })}
-        </svg>
-    );
-};
 
 /**
  * Simple SVG Pie Chart for Category Share
@@ -291,7 +228,9 @@ const App = () => {
                     {/* Monthly Trends */}
                     <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
                         <h3 className="text-lg font-bold mb-4 text-slate-700">📅 月別収支推移</h3>
-                        <SimpleBarChart data={monthlyData} />
+                        <div className="h-64">
+                            <MonthlyBalanceChart data={monthlyData} />
+                        </div>
                     </div>
 
                     {/* Category Share */}

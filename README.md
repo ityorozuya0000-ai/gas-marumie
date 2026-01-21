@@ -40,9 +40,12 @@
 2.  **新規登録**: 画面上部のフォームに必要な情報を入力し、「追加」ボタンを押します。
 3.  **編集・削除**: リスト内の各行にある「編集」「削除」ボタンから操作を行います。
 
-## セットアップ手順
+---
 
-Public App と Admin App は、コードベースは同じリポジトリにありますが、**それぞれ別のGASプロジェクト**としてデプロイする必要があります。
+## セットアップとデプロイ（非エンジニア向け）
+
+ここでは、**既にビルド済みのコード（`Code.gs` と `index.html`）が手元にある**、または提供されていることを前提とした手順を説明します。
+（自分でコードをビルドする場合は、後述の「開発ガイド」を参照してください）
 
 ### 1. 共通データベース (Spreadsheet) の準備
 1.  新規にGoogle Spreadsheetを作成します。
@@ -52,7 +55,75 @@ Public App と Admin App は、コードベースは同じリポジトリにあ�
     - `Transactions`
     - `Categories`
 
-### 2. 環境構築 (ローカル)
+### 2. ダッシュボード画面 (Public App) のデプロイ
+
+**必要なファイル:**
+- `apps/public/dist/Code.gs`
+- `apps/public/dist/index.html`
+
+**手順:**
+1.  **GASプロジェクトの作成**
+    1.  [Google Apps Script](https://script.google.com/) にアクセスし、「新しいプロジェクト」を作成します（プロジェクト名: "Marumie Public" など）。
+
+2.  **コードの反映**
+    1.  **サーバーサイドコード**:
+        *   GASエディタのデフォルトの `コード.gs` (または `Code.gs`) を開きます。
+        *   用意された `apps/public/dist/Code.gs` の内容を全てコピーし、GASエディタに貼り付けて保存します。
+    2.  **フロントエンドコード**:
+        *   GASエディタの「＋」アイコンから「HTML」を選択し、ファイル名を `index` として作成します。
+        *   用意された `apps/public/dist/index.html` の内容を全てコピーし、GASエディタに貼り付けて保存します。
+
+3.  **GAS側の設定**
+    1.  [プロジェクトの設定] (歯車アイコン) > [スクリプト プロパティ] を開きます。
+    2.  プロパティを追加します:
+        - プロパティ: `SPREADSHEET_ID`
+        - 値: *(手順1で控えたSpreadsheet ID)*
+
+4.  **デプロイ (公開)**
+    1.  [デプロイ] > [新しいデプロイ] を選択。
+    2.  種類の選択: **ウェブアプリ**
+    3.  次のユーザーとして実行: **自分**
+    4.  アクセスできるユーザー: **全員** (ここが重要です)
+    5.  [デプロイ] をクリックして発行されたURLにアクセスし、動作を確認します。
+
+### 3. 管理画面 (Admin App) のデプロイ
+
+**必要なファイル:**
+- `apps/admin/dist/Code.gs`
+- `apps/admin/dist/index.html`
+
+**手順:**
+1.  **GASプロジェクトの作成**
+    1.  [Google Apps Script](https://script.google.com/) にアクセスし、「新しいプロジェクト」を作成します（プロジェクト名: "Marumie Admin" など）。
+
+2.  **コードの反映**
+    1.  **サーバーサイドコード**:
+        *   GASエディタのデフォルトの `コード.gs` (または `Code.gs`) を開きます。
+        *   用意された `apps/admin/dist/Code.gs` の内容を全てコピーし、GASエディタに貼り付けて保存します。
+    2.  **フロントエンドコード**:
+        *   GASエディタの「＋」アイコンから「HTML」を選択し、ファイル名を `index` として作成します。
+        *   用意された `apps/admin/dist/index.html` の内容を全てコピーし、GASエディタに貼り付けて保存します。
+
+3.  **GAS側の設定**
+    1.  [プロジェクトの設定] (歯車アイコン) > [スクリプト プロパティ] を開きます。
+    2.  プロパティを追加します:
+        - プロパティ: `SPREADSHEET_ID`
+        - 値: *(**Public Appと同じID**を設定してください)*
+
+4.  **デプロイ (公開)**
+    1.  [デプロイ] > [新しいデプロイ] を選択。
+    2.  種類の選択: **ウェブアプリ**
+    3.  次のユーザーとして実行: **自分**
+    4.  アクセスできるユーザー: **自分のみ** (または Google Workspace内のユーザー)
+    5.  [デプロイ] をクリックして発行されたURLにアクセスし、動作を確認します。
+
+---
+
+## 開発ガイド（エンジニア向け）
+
+自分でソースコードを編集・ビルドする場合の手順です。
+
+### 環境構築
 このリポジトリのルートで依存関係をインストールします。
 
 ```bash
@@ -60,97 +131,17 @@ Public App と Admin App は、コードベースは同じリポジトリにあ�
 npm install
 ```
 
----
+### ビルドコマンド
+モノレポのルートディレクトリから以下のコマンドを実行して、デプロイ用のファイルを生成します。
 
-### 3. ダッシュボード画面 (Public App/GAS) の設定
+**Public App (ダッシュボード) のビルド**
+```bash
+npm run build:public
+```
+-> `apps/public/dist/` に `Code.gs` と `index.html` が生成されます。
 
-一般公開用の閲覧専用アプリです。
-
-1.  **ディレクトリ移動**
-    ```bash
-    cd apps/public
-    ```
-
-2.  **GASプロジェクトの作成（初回のみ）**
-    ```bash
-    npx clasp login
-    npx clasp create --type standalone --title "Marumie Public (Dashboard)" --rootDir dist
-    ```
-    ※ 既に `.clasp.json` がある場合はスキップしてください。
-
-3.  **ビルド & プッシュ**
-    ```bash
-    # 親ディレクトリ(ルート)から実行する場合
-    npm run build:public
-    npm run push:public
-
-    # または apps/public 内で
-    npm run build
-    npx clasp push
-    ```
-
-4.  **GAS側の設定**
-    1.  `clasp open` またはブラウザでGASエディタを開きます。
-    2.  [プロジェクトの設定] (歯車アイコン) > [スクリプト プロパティ] を開きます。
-    3.  プロパティを追加します:
-        - プロパティ: `SPREADSHEET_ID`
-        - 値: *(手順1で控えたSpreadsheet ID)*
-
-5.  **デプロイ (公開)**
-    1.  [デプロイ] > [新しいデプロイ] を選択。
-    2.  種類の選択: **ウェブアプリ**
-    3.  次のユーザーとして実行: **自分**
-    4.  アクセスできるユーザー: **全員** (ここが重要です)
-    5.  [デプロイ] をクリックして発行されたURLにアクセスし、動作を確認します。
-
----
-
-### 4. 管理画面 (Admin App/GAS) の設定
-
-データ登録・編集用の管理者専用アプリです。
-
-1.  **ディレクトリ移動**
-    ```bash
-    cd apps/admin
-    ```
-
-2.  **GASプロジェクトの作成（初回のみ）**
-    ```bash
-    npx clasp create --type standalone --title "Marumie Admin" --rootDir dist
-    ```
-    ※ 既に `.clasp.json` がある場合はスキップしてください。
-
-3.  **ビルド & プッシュ**
-    ```bash
-    # 親ディレクトリ(ルート)から実行する場合
-    npm run build:admin
-    npm run push:admin
-
-    # または apps/admin 内で
-    npm run build
-    npx clasp push
-    ```
-
-4.  **GAS側の設定**
-    1.  `clasp open` またはブラウザでGASエディタを開きます。
-    2.  [プロジェクトの設定] (歯車アイコン) > [スクリプト プロパティ] を開きます。
-    3.  プロパティを追加します:
-        - プロパティ: `SPREADSHEET_ID`
-        - 値: *(**Public Appと同じID**を設定してください)*
-
-5.  **デプロイ (公開)**
-    1.  [デプロイ] > [新しいデプロイ] を選択。
-    2.  種類の選択: **ウェブアプリ**
-    3.  次のユーザーとして実行: **自分**
-    4.  アクセスできるユーザー: **自分のみ** (または Google Workspace内のユーザー)
-    5.  [デプロイ] をクリックして発行されたURLにアクセスし、動作を確認します。
-
-## 開発ガイド
-
-### ビルドコマンド (ルート)
-モノレポのルートディレクトリから以下のコマンドが使用できます。
-
-- `npm run build:public` : Public Appのビルド
-- `npm run build:admin`  : Admin Appのビルド
-- `npm run push:public`  : Public AppのGASへのプッシュ
-- `npm run push:admin`   : Admin AppのGASへのプッシュ
+**Admin App (管理画面) のビルド**
+```bash
+npm run build:admin
+```
+-> `apps/admin/dist/` に `Code.gs` と `index.html` が生成されます。

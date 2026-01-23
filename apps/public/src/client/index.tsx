@@ -1,7 +1,10 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { createRoot } from 'react-dom/client';
 import { AppData, Transaction, Category } from '@marumie/shared';
+import { DonutChart } from './components/DonutChart';
 import { MonthlyBalanceChart } from './components/MonthlyBalanceChart';
+import { GasClient } from './services/GasClient';
+import { TransactionAnalyzer } from './domain/TransactionAnalyzer';
 
 // --- Mocks ---
 const runGoogleScript = (name: string, args: any[] = []): Promise<any> => {
@@ -27,76 +30,6 @@ const runGoogleScript = (name: string, args: any[] = []): Promise<any> => {
 
 // --- Helper Components ---
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
-
-/**
- * Simple SVG Pie Chart for Category Share
- */
-const SimplePieChart = ({ data }: { data: { name: string; value: number }[] }) => {
-    if (!data || data.length === 0) return <div className="h-full flex items-center justify-center text-slate-400">データがありません</div>;
-
-    const total = data.reduce((acc, cur) => acc + cur.value, 0);
-    let cumulativeAngle = 0;
-
-    const cx = 100;
-    const cy = 100;
-    const r = 80;
-    const hole = 50; // Donut chart
-
-    const slices = data.map((d, i) => {
-        const startAngle = cumulativeAngle;
-        const sliceAngle = (d.value / total) * 2 * Math.PI;
-        cumulativeAngle += sliceAngle;
-        const endAngle = cumulativeAngle;
-
-        // Calculate path
-        const x1 = cx + r * Math.cos(startAngle - Math.PI / 2);
-        const y1 = cy + r * Math.sin(startAngle - Math.PI / 2);
-        const x2 = cx + r * Math.cos(endAngle - Math.PI / 2);
-        const y2 = cy + r * Math.sin(endAngle - Math.PI / 2);
-
-        // Inner arc for donut
-        const x3 = cx + hole * Math.cos(endAngle - Math.PI / 2);
-        const y3 = cy + hole * Math.sin(endAngle - Math.PI / 2);
-        const x4 = cx + hole * Math.cos(startAngle - Math.PI / 2);
-        const y4 = cy + hole * Math.sin(startAngle - Math.PI / 2);
-
-        const largeArcFlag = sliceAngle > Math.PI ? 1 : 0;
-
-        const pathData = [
-            `M ${x1} ${y1}`,
-            `A ${r} ${r} 0 ${largeArcFlag} 1 ${x2} ${y2}`,
-            `L ${x3} ${y3}`,
-            `A ${hole} ${hole} 0 ${largeArcFlag} 0 ${x4} ${y4}`,
-            'Z'
-        ].join(' ');
-
-        return { pathData, color: COLORS[i % COLORS.length], ...d };
-    });
-
-    return (
-        <div className="flex items-center justify-center h-full w-full">
-            <svg viewBox="0 0 200 200" className="h-full w-auto max-w-full">
-                {slices.map((slice, i) => (
-                    <path key={i} d={slice.pathData} fill={slice.color} stroke="#fff" strokeWidth="1" className="hover:opacity-90 cursor-pointer">
-                        <title>{`${slice.name}: ¥${slice.value.toLocaleString()} (${Math.round(slice.value / total * 100)}%)`}</title>
-                    </path>
-                ))}
-            </svg>
-            <div className="ml-4 text-xs space-y-1">
-                {data.map((d, i) => (
-                    <div key={i} className="flex items-center">
-                        <span className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: COLORS[i % COLORS.length] }}></span>
-                        <span className="text-slate-600 truncate max-w-[100px]" title={d.name}>{d.name}</span>
-                        <span className="ml-2 font-bold text-slate-700">{Math.round(d.value / total * 100)}%</span>
-                    </div>
-                ))}
-            </div>
-        </div>
-    );
-};
-
-import { GasClient } from './services/GasClient';
-import { TransactionAnalyzer } from './domain/TransactionAnalyzer';
 
 // --- Services ---
 const gasClient = new GasClient();
@@ -155,24 +88,33 @@ const App = () => {
 
     const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage);
 
-    // 3. Chart Data: Monthly Trends (Using All data or Filtered data context)
-    // Design Choice: Charts reflect the current list (filtered context)
-    const monthlyData = useMemo(() => {
+    // Helper to assign colors
+    const assignColors = (data: { name: string; value: number }[]) => {
+        return data.map((d, i) => ({
+            ...d,
+            color: COLORS[i % COLORS.length]
+        }));
+    };
+
+    // 3. Chart Data: Income Category Share
+    const incomeCategoryData = useMemo(() => {
         if (!analyzer) return [];
-        // Determine source: if filters active, show filtered trends? 
-        // Or always show global trends?
-        // Let's stick to previous behavior: effectively filtered context mostly, 
-        // but if we want Global context we'd pass data.transactions.
-        // The previous code did: if filtered > 0 ? filtered : all.
         const source = filteredTransactions.length > 0 ? filteredTransactions : (data?.transactions || []);
-        return analyzer.getMonthlyTrends(source);
+        return assignColors(analyzer.getCategoryShare(source, 'INCOME'));
     }, [analyzer, filteredTransactions, data]);
 
-    // 4. Chart Data: Category Share (Expense)
-    const categoryData = useMemo(() => {
+    // 4. Chart Data: Expense Category Share
+    const expenseCategoryData = useMemo(() => {
         if (!analyzer) return [];
         const source = filteredTransactions.length > 0 ? filteredTransactions : (data?.transactions || []);
-        return analyzer.getCategoryShare(source);
+        return assignColors(analyzer.getCategoryShare(source, 'EXPENSE'));
+    }, [analyzer, filteredTransactions, data]);
+
+    // 5. Chart Data: Monthly Trends
+    const monthlyData = useMemo(() => {
+        if (!analyzer) return [];
+        const source = filteredTransactions.length > 0 ? filteredTransactions : (data?.transactions || []);
+        return analyzer.getMonthlyTrends(source);
     }, [analyzer, filteredTransactions, data]);
 
     // 5. Global Totals (Filtered)
@@ -224,20 +166,30 @@ const App = () => {
                 </div>
 
                 {/* 2. Charts Section */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    {/* Monthly Trends */}
-                    <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                        <h3 className="text-lg font-bold mb-4 text-slate-700">📅 月別収支推移</h3>
-                        <div className="h-64">
-                            <MonthlyBalanceChart data={monthlyData} />
-                        </div>
+                <div className="bg-white p-8 rounded-xl shadow-sm border border-slate-200">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                        {/* Income Donut */}
+                        <DonutChart
+                            title="収入内訳 (カテゴリ別)"
+                            centerLabel="収入"
+                            totalAmount={stats.totalIncome}
+                            data={incomeCategoryData}
+                        />
+
+                        {/* Expense Donut */}
+                        <DonutChart
+                            title="支出内訳 (カテゴリ別)"
+                            centerLabel="支出"
+                            totalAmount={stats.totalExpense}
+                            data={expenseCategoryData}
+                        />
                     </div>
 
-                    {/* Category Share */}
-                    <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                        <h3 className="text-lg font-bold mb-4 text-slate-700">🍩 支出内訳 (カテゴリ別)</h3>
-                        <div className="h-64">
-                            <SimplePieChart data={categoryData} />
+                    {/* Monthly Trends - Restored */}
+                    <div className="mt-12 pt-8 border-t border-slate-100">
+                        <h3 className="text-lg font-bold mb-6 text-slate-700">📅 月別収支推移</h3>
+                        <div className="h-72">
+                            <MonthlyBalanceChart data={monthlyData} />
                         </div>
                     </div>
                 </div>

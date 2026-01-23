@@ -92,13 +92,13 @@ export class TransactionAnalyzer {
     }
 
     /**
-     * Calculate category share for expenses.
+     * Calculate category share for income or expenses.
      */
-    getCategoryShare(targetTransactions: Transaction[]): CategoryData[] {
+    getCategoryShare(targetTransactions: Transaction[], type: 'INCOME' | 'EXPENSE'): CategoryData[] {
         const map = new Map<string, number>();
 
         targetTransactions
-            .filter(t => t.type === 'EXPENSE')
+            .filter(t => t.type === type)
             .forEach(t => {
                 map.set(t.categoryId, (map.get(t.categoryId) || 0) + t.amount);
             });

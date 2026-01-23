@@ -12,6 +12,8 @@ interface DonutChartProps {
 }
 
 export const DonutChart = ({ title, centerLabel, totalAmount, data }: DonutChartProps) => {
+    const [activeItem, setActiveItem] = React.useState<{ name: string; value: number; color: string } | null>(null);
+
     const chartData = {
         labels: data.map(d => d.name),
         datasets: [
@@ -30,15 +32,19 @@ export const DonutChart = ({ title, centerLabel, totalAmount, data }: DonutChart
                 display: false, // We use a custom legend
             },
             tooltip: {
-                callbacks: {
-                    label: function (context: any) {
-                        return `${context.label}: ${context.parsed.toLocaleString()} 円`;
-                    }
-                }
+                enabled: false, // Disable default tooltip to prevent overlap
             }
         },
         cutout: '65%', // Create donut hole
         maintainAspectRatio: false,
+        onHover: (event: any, elements: any[]) => {
+            if (elements && elements.length > 0) {
+                const index = elements[0].index;
+                setActiveItem(data[index]);
+            } else {
+                setActiveItem(null);
+            }
+        },
     };
 
     return (
@@ -52,8 +58,15 @@ export const DonutChart = ({ title, centerLabel, totalAmount, data }: DonutChart
 
                     {/* Center Text Overlay */}
                     <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                        <div className="text-2xl font-bold text-slate-600 mb-1">{centerLabel}</div>
-                        <div className="text-lg font-bold text-slate-900">{totalAmount.toLocaleString()}円</div>
+                        <div className="text-xl font-bold text-slate-500 mb-1">
+                            {activeItem ? activeItem.name : centerLabel}
+                        </div>
+                        <div
+                            className={`text-lg font-bold ${activeItem ? '' : 'text-slate-900'}`}
+                            style={{ color: activeItem ? activeItem.color : undefined }}
+                        >
+                            {activeItem ? `${activeItem.value.toLocaleString()}円` : `${totalAmount.toLocaleString()}円`}
+                        </div>
                     </div>
                 </div>
 
@@ -69,9 +82,11 @@ export const DonutChart = ({ title, centerLabel, totalAmount, data }: DonutChart
                                     ></span>
                                     <span className="text-slate-600 font-medium">{item.name}</span>
                                 </div>
-                                <span className="font-bold text-slate-700 ml-4">
-                                    {totalAmount > 0 ? Math.round((item.value / totalAmount) * 100) : 0}%
-                                </span>
+                                <div className="flex items-center gap-2">
+                                    <span className="font-bold text-slate-700">
+                                        {totalAmount > 0 ? Math.round((item.value / totalAmount) * 100) : 0}%
+                                    </span>
+                                </div>
                             </div>
                         ))}
                     </div>

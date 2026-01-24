@@ -2,6 +2,7 @@ import { AppData, Category, Transaction } from '../types/models';
 
 const TRANSACTIONS_SHEET_NAME = 'Transactions';
 const CATEGORIES_SHEET_NAME = 'Categories';
+const SETTINGS_SHEET_NAME = 'Settings';
 const CACHE_FILE_NAME = 'marumie_db_cache.json';
 
 export class DatabaseService {
@@ -358,6 +359,49 @@ export class DatabaseService {
             sheet.getRange(1, 8).setValue('receiptUrl');
         } else if (headers[7] === '') {
             sheet.getRange(1, 8).setValue('receiptUrl');
+        }
+    }
+
+
+
+    // --- Settings Management ---
+
+    public getSettings(): Record<string, any> {
+        const ss = this.getSpreadsheet();
+        const sheet = ss.getSheetByName(SETTINGS_SHEET_NAME);
+        if (!sheet) return {};
+
+        const data = sheet.getDataRange().getValues();
+        const settings: Record<string, any> = {};
+
+        // Assume Row 1 is Key, Row 2 is Value
+        if (data.length >= 2) {
+            const keys = data[0];
+            const values = data[1];
+            keys.forEach((key, index) => {
+                if (key) {
+                    settings[String(key)] = values[index];
+                }
+            });
+        }
+        return settings;
+    }
+
+    public saveSettings(settings: Record<string, any>): void {
+        const ss = this.getSpreadsheet();
+        let sheet = ss.getSheetByName(SETTINGS_SHEET_NAME);
+        if (!sheet) {
+            sheet = ss.insertSheet(SETTINGS_SHEET_NAME);
+        } else {
+            sheet.clear();
+        }
+
+        const keys = Object.keys(settings);
+        const values = keys.map(k => settings[k]);
+
+        if (keys.length > 0) {
+            sheet.appendRow(keys);
+            sheet.appendRow(values);
         }
     }
 

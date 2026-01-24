@@ -23,8 +23,23 @@ export class AppController {
      * Handle HTTP GET request (Web App)
      */
     doGet(e: any): GoogleAppsScript.HTML.HtmlOutput {
+        // Try to get dynamic title from DB
+        let appTitle = 'みらいまる見え政治資金';
+        try {
+            if (this.spreadsheetId) {
+                const db = new DatabaseService(this.spreadsheetId);
+                const settings = db.getSettings();
+                if (settings.appTitle) appTitle = settings.appTitle;
+            } else {
+                appTitle = PropertiesService.getScriptProperties().getProperty('APP_TITLE') || appTitle;
+            }
+        } catch (e) {
+            // Fallback if DB err
+            appTitle = PropertiesService.getScriptProperties().getProperty('APP_TITLE') || appTitle;
+        }
+
         return HtmlService.createHtmlOutputFromFile('index')
-            .setTitle('Marumie GAS')
+            .setTitle(appTitle)
             .addMetaTag('viewport', 'width=device-width, initial-scale=1')
             .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
     }
@@ -34,7 +49,14 @@ export class AppController {
      */
     getInitialData(): AppData {
         const db = this.getDbOrFail();
-        return db.getAllData();
+        const data = db.getAllData();
+        const settings = db.getSettings();
+
+        // Use DB settings, fallback to Script Properties, then hard default
+        const appTitle = settings.appTitle || PropertiesService.getScriptProperties().getProperty('APP_TITLE') || 'みらいまる見え政治資金';
+        const fiscalYearStartMonth = Number(settings.fiscalYearStartMonth) || Number(PropertiesService.getScriptProperties().getProperty('FISCAL_YEAR_START_MONTH')) || 4;
+
+        return { ...data, appTitle, fiscalYearStartMonth };
     }
 
     /**

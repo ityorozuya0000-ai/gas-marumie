@@ -129,4 +129,68 @@ export class TransactionAnalyzer {
             balance: totalIncome - totalExpense
         };
     }
+    /**
+     * Helper: Calculate Fiscal Year for a given date
+     */
+    getFiscalYear(date: string, startMonth: number): number {
+        const d = new Date(date);
+        const year = d.getFullYear();
+        const month = d.getMonth() + 1; // 1-12
+        return month < startMonth ? year - 1 : year;
+    }
+
+    /**
+     * Get list of available fiscal years from transactions
+     */
+    getAvailableFiscalYears(startMonth: number): number[] {
+        const years = new Set<number>();
+        this.transactions.forEach(t => {
+            years.add(this.getFiscalYear(t.date, startMonth));
+        });
+        return Array.from(years).sort((a, b) => b - a); // Descending
+    }
+
+    /**
+     * Get monthly trends for a specific fiscal year.
+     * Returns 12 months data starting from startMonth.
+     * @param targetTransactions Optional filtered transactions. If not provided, uses all transactions.
+     */
+    getMonthlyTrendsForFiscalYear(fiscalYear: number, startMonth: number, targetTransactions?: Transaction[]): MonthlyData[] {
+        const source = targetTransactions || this.transactions;
+        const result: MonthlyData[] = [];
+        const map = new Map<string, MonthlyData>();
+
+        // 1. Initialize 12 months
+        for (let i = 0; i < 12; i++) {
+            let year = fiscalYear;
+            let month = startMonth + i;
+            if (month > 12) {
+                month -= 12;
+                year += 1;
+            }
+            const yyyy = year.toString();
+            const mm = month.toString().padStart(2, '0');
+            const key = `${yyyy}-${mm}`;
+            map.set(key, { month: key, income: 0, expense: 0 });
+            result.push(map.get(key)!);
+        }
+
+        // 2. Aggregate data
+        source.forEach(t => {
+            const tYear = this.getFiscalYear(t.date, startMonth);
+            if (tYear === fiscalYear) {
+                const monthKey = t.date.slice(0, 7);
+                const entry = map.get(monthKey);
+                // Note: Entry might be undefined if transaction date is somehow out of calculated range (should not happen if logic is correct)
+                if (entry) {
+                    if (t.type === 'INCOME') entry.income += t.amount;
+                    else entry.expense += t.amount;
+                }
+            }
+        });
+
+        return result;
+    }
+
+    // Keep existing methods but they might need to be aware of fiscal year context if filtering globally
 }

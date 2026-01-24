@@ -42,14 +42,34 @@ export class AdminApp {
     /**
      * Settings Management
      */
-    public saveSettings(settings: { geminiApiKey: string; driveFolderId: string; spreadsheetId: string; appTitle: string }): boolean {
+    /**
+     * Settings Management
+     */
+    public saveSettings(settings: { geminiApiKey: string; driveFolderId: string; spreadsheetId: string; appTitle: string; fiscalYearStartMonth: number }): boolean {
         this.checkAuth();
         try {
+            // Save to Script Properties (Legacy & Key/Folder storage)
             const props = PropertiesService.getScriptProperties();
             props.setProperty('GEMINI_API_KEY', settings.geminiApiKey);
             props.setProperty('DRIVE_FOLDER_ID', settings.driveFolderId);
             props.setProperty('SPREADSHEET_ID', settings.spreadsheetId);
             props.setProperty('APP_TITLE', settings.appTitle);
+            props.setProperty('FISCAL_YEAR_START_MONTH', String(settings.fiscalYearStartMonth || 4));
+
+            // Save to Database (Shared with Public App)
+            if (settings.spreadsheetId) {
+                try {
+                    const db = new DatabaseService(settings.spreadsheetId);
+                    db.saveSettings({
+                        appTitle: settings.appTitle,
+                        fiscalYearStartMonth: settings.fiscalYearStartMonth
+                    });
+                } catch (e) {
+                    console.warn('Failed to save settings to spreadsheet db:', e);
+                    // Continue even if DB save fails?Ideally yes, to not block admin config.
+                }
+            }
+
             return true;
         } catch (e) {
             console.error('Error saving settings:', e);
@@ -57,15 +77,31 @@ export class AdminApp {
         }
     }
 
-    public getSettings(): { geminiApiKey: string; driveFolderId: string; spreadsheetId: string; appTitle: string } {
+    public getSettings(): { geminiApiKey: string; driveFolderId: string; spreadsheetId: string; appTitle: string; fiscalYearStartMonth: number } {
         this.checkAuth();
         const props = PropertiesService.getScriptProperties();
-        return {
+
+        const settings = {
             geminiApiKey: props.getProperty('GEMINI_API_KEY') || '',
             driveFolderId: props.getProperty('DRIVE_FOLDER_ID') || '',
             spreadsheetId: props.getProperty('SPREADSHEET_ID') || '',
             appTitle: props.getProperty('APP_TITLE') || 'みらいまる見え政治資金-管理画面',
+            fiscalYearStartMonth: Number(props.getProperty('FISCAL_YEAR_START_MONTH')) || 4,
         };
+
+        // Try to merge from DB if available (DB is source of truth for Title/FY)
+        if (settings.spreadsheetId) {
+            try {
+                const db = new DatabaseService(settings.spreadsheetId);
+                const dbSettings = db.getSettings();
+                if (dbSettings.appTitle) settings.appTitle = dbSettings.appTitle;
+                if (dbSettings.fiscalYearStartMonth) settings.fiscalYearStartMonth = Number(dbSettings.fiscalYearStartMonth);
+            } catch (e) {
+                console.warn('Failed to read settings from db:', e);
+            }
+        }
+
+        return settings;
     }
 
     /**
@@ -116,7 +152,7 @@ export class AdminApp {
             const db = new DatabaseService(id);
             db.ensureHeaders(); // Ensure schema is up to date
             const data = db.getAllData();
-            return { ...data, hasApiKey, appTitle: settings.appTitle };
+            return { ...data, hasApiKey, appTitle: settings.appTitle, fiscalYearStartMonth: settings.fiscalYearStartMonth };
         } catch (e) {
             console.error(e);
             throw e;

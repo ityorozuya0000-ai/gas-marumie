@@ -20,6 +20,7 @@ export const SettingsModal = ({ isOpen, onClose, runScript }: SettingsModalProps
     const [folderId, setFolderId] = useState('');
     const [spreadsheetId, setSpreadsheetId] = useState('');
     const [appTitle, setAppTitle] = useState('');
+    const [fiscalYearStartMonth, setFiscalYearStartMonth] = useState(4);
 
     useEffect(() => {
         if (isOpen) {
@@ -35,6 +36,7 @@ export const SettingsModal = ({ isOpen, onClose, runScript }: SettingsModalProps
             setFolderId(settings.driveFolderId || '');
             setSpreadsheetId(settings.spreadsheetId || '');
             setAppTitle(settings.appTitle || '');
+            setFiscalYearStartMonth(settings.fiscalYearStartMonth || 4);
         } catch (e) {
             console.error('Failed to load settings', e);
         } finally {
@@ -46,7 +48,7 @@ export const SettingsModal = ({ isOpen, onClose, runScript }: SettingsModalProps
         e.preventDefault();
         setLoading(true);
         try {
-            await runScript('saveSettings', [{ geminiApiKey: apiKey, driveFolderId: folderId, spreadsheetId: spreadsheetId, appTitle: appTitle }]);
+            await runScript('saveSettings', [{ geminiApiKey: apiKey, driveFolderId: folderId, spreadsheetId: spreadsheetId, appTitle: appTitle, fiscalYearStartMonth: fiscalYearStartMonth }]);
             alert('設定を保存しました');
             onClose();
         } catch (e: any) {
@@ -111,15 +113,29 @@ export const SettingsModal = ({ isOpen, onClose, runScript }: SettingsModalProps
                         </p>
                     </div>
 
-                    <div>
-                        <label className="block text-sm font-bold text-slate-700 mb-1">アプリタイトル</label>
-                        <input
-                            type="text"
-                            value={appTitle}
-                            onChange={(e) => setAppTitle(e.target.value)}
-                            className="w-full border rounded p-2"
-                            placeholder="管理画面のタイトル"
-                        />
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-bold text-slate-700 mb-1">アプリタイトル</label>
+                            <input
+                                type="text"
+                                value={appTitle}
+                                onChange={(e) => setAppTitle(e.target.value)}
+                                className="w-full border rounded p-2"
+                                placeholder="管理画面のタイトル"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-bold text-slate-700 mb-1">会計年度開始月</label>
+                            <select
+                                value={fiscalYearStartMonth}
+                                onChange={(e) => setFiscalYearStartMonth(Number(e.target.value))}
+                                className="w-full border rounded p-2"
+                            >
+                                {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
+                                    <option key={m} value={m}>{m}月</option>
+                                ))}
+                            </select>
+                        </div>
                     </div>
 
                     <div className="flex justify-end pt-4">

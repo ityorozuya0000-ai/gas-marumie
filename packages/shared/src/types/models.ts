@@ -23,4 +23,5 @@ export interface AppData {
     lastUpdated: string;
     hasApiKey?: boolean;
     appTitle?: string;
+    fiscalYearStartMonth?: number;
 }

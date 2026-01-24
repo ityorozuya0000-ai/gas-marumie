@@ -59,29 +59,66 @@ export const options = {
 
 // ... imports ...
 
+// ... imports ...
+
 interface MonthlyBalanceChartProps {
   data: { month: string; income: number; expense: number }[];
+  comparisonData?: { month: string; income: number; expense: number }[];
 }
 
-export function MonthlyBalanceChart({ data }: MonthlyBalanceChartProps) {
-  const labels = data.map(d => d.month);
+export function MonthlyBalanceChart({ data, comparisonData }: MonthlyBalanceChartProps) {
+  // Extract month part for label (e.g., "2024-04" -> "04") and adding "月"
+  // Assuming data is sorted and contains 12 months for fiscal year view
+  const labels = data.map(d => {
+    const parts = d.month.split('-');
+    return parts.length === 2 ? `${Number(parts[1])}月` : d.month;
+  });
+
   const incomeData = data.map(d => d.income);
-  const expenseData = data.map(d => -Math.abs(d.expense)); // Ensure expense is negative
+  const expenseData = data.map(d => -Math.abs(d.expense));
+
+  const datasets = [
+    {
+      label: '収入',
+      data: incomeData,
+      backgroundColor: 'rgba(53, 162, 235, 0.8)',
+      categoryPercentage: 0.6,
+      barPercentage: 0.8,
+    },
+    {
+      label: '支出',
+      data: expenseData,
+      backgroundColor: 'rgba(255, 99, 132, 0.8)',
+      categoryPercentage: 0.6,
+      barPercentage: 0.8,
+    },
+  ];
+
+  if (comparisonData && comparisonData.length > 0) {
+    const compIncome = comparisonData.map(d => d.income);
+    const compExpense = comparisonData.map(d => -Math.abs(d.expense));
+
+    datasets.push(
+      {
+        label: '収入 (前年)',
+        data: compIncome,
+        backgroundColor: 'rgba(53, 162, 235, 0.3)',
+        categoryPercentage: 0.6,
+        barPercentage: 0.8,
+      },
+      {
+        label: '支出 (前年)',
+        data: compExpense,
+        backgroundColor: 'rgba(255, 99, 132, 0.3)',
+        categoryPercentage: 0.6,
+        barPercentage: 0.8,
+      }
+    );
+  }
 
   const chartData = {
     labels,
-    datasets: [
-      {
-        label: '収入',
-        data: incomeData,
-        backgroundColor: 'rgba(53, 162, 235, 0.5)',
-      },
-      {
-        label: '支出',
-        data: expenseData,
-        backgroundColor: 'rgba(255, 99, 132, 0.5)',
-      },
-    ],
+    datasets,
   };
 
   return (

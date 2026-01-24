@@ -165,7 +165,9 @@ const App = () => {
                     </div>
                 </div>
 
-                {/* 2. Charts Section */}
+
+
+                {/* 2. Charts Section (Donut only) */}
                 <div className="bg-white p-8 rounded-xl shadow-sm border border-slate-200">
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
                         {/* Income Donut */}
@@ -184,17 +186,17 @@ const App = () => {
                             data={expenseCategoryData}
                         />
                     </div>
+                </div>
 
-                    {/* Monthly Trends - Restored */}
-                    <div className="mt-12 pt-8 border-t border-slate-100">
-                        <h3 className="text-lg font-bold mb-6 text-slate-700">📅 月別収支推移</h3>
-                        <div className="h-72">
-                            <MonthlyBalanceChart data={monthlyData} />
-                        </div>
+                {/* 3. Monthly Trends (Dedicated Card) */}
+                <div className="bg-white p-8 rounded-xl shadow-sm border border-slate-200">
+                    <h3 className="text-lg font-bold mb-6 text-slate-700">📅 月別収支推移</h3>
+                    <div className="h-96 w-full relative">
+                        <MonthlyBalanceChart data={monthlyData} />
                     </div>
                 </div>
 
-                {/* 3. Transaction List & Filters */}
+                {/* 4. Transaction List & Filters */}
                 <section className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                     <div className="p-6 border-b border-slate-100 space-y-4">
                         <div className="flex justify-between items-center flex-wrap gap-4">
@@ -305,8 +307,8 @@ const App = () => {
                         </>
                     )}
                 </section>
-            </main>
-        </div>
+            </main >
+        </div >
     );
 };
 

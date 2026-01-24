@@ -26,21 +26,22 @@ export const options = {
       text: '月次収支チャート',
     },
     tooltip: {
-        callbacks: {
-            label: function(context: any) {
-                let label = context.dataset.label || '';
-                if (label) {
-                    label += ': ';
-                }
-                if (context.parsed.y !== null) {
-                    label += Math.abs(context.parsed.y).toLocaleString() + ' 円';
-                }
-                return label;
-            }
+      callbacks: {
+        label: function (context: any) {
+          let label = context.dataset.label || '';
+          if (label) {
+            label += ': ';
+          }
+          if (context.parsed.y !== null) {
+            label += Math.abs(context.parsed.y).toLocaleString() + ' 円';
+          }
+          return label;
         }
+      }
     }
   },
   responsive: true,
+  maintainAspectRatio: false,
   scales: {
     x: {
       stacked: true,
@@ -48,9 +49,9 @@ export const options = {
     y: {
       stacked: true,
       ticks: {
-          callback: function(value: any) {
-              return Math.abs(value).toLocaleString();
-          }
+        callback: function (value: any) {
+          return Math.abs(value).toLocaleString();
+        }
       }
     },
   },
@@ -83,5 +84,9 @@ export function MonthlyBalanceChart({ data }: MonthlyBalanceChartProps) {
     ],
   };
 
-  return <Bar options={options} data={chartData} />;
+  return (
+    <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+      <Bar options={options} data={chartData} />
+    </div>
+  );
 }

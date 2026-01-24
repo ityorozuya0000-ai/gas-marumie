@@ -49,7 +49,12 @@ export const DonutChart = ({ title, centerLabel, totalAmount, data }: DonutChart
 
     return (
         <div className="flex flex-col items-center w-full">
-            <h3 className="text-lg font-bold mb-6 text-slate-700">{title}</h3>
+            <h3 className="text-lg font-bold mb-4 text-slate-700">{title}</h3>
+
+            <div className="flex flex-col items-center mb-6">
+                <span className="text-sm text-slate-500 font-medium">{centerLabel}</span>
+                <span className="text-3xl font-bold text-slate-800">{totalAmount.toLocaleString()}円</span>
+            </div>
 
             <div className="flex flex-col md:flex-row items-center justify-center w-full gap-8">
                 {/* Chart Container */}
@@ -58,15 +63,19 @@ export const DonutChart = ({ title, centerLabel, totalAmount, data }: DonutChart
 
                     {/* Center Text Overlay */}
                     <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                        <div className="text-xl font-bold text-slate-500 mb-1">
-                            {activeItem ? activeItem.name : centerLabel}
-                        </div>
-                        <div
-                            className={`text-lg font-bold ${activeItem ? '' : 'text-slate-900'}`}
-                            style={{ color: activeItem ? activeItem.color : undefined }}
-                        >
-                            {activeItem ? `${activeItem.value.toLocaleString()}円` : `${totalAmount.toLocaleString()}円`}
-                        </div>
+                        {activeItem && (
+                            <>
+                                <div className="text-xl font-bold text-slate-500 mb-1">
+                                    {activeItem.name}
+                                </div>
+                                <div
+                                    className="text-lg font-bold"
+                                    style={{ color: activeItem.color }}
+                                >
+                                    {activeItem.value.toLocaleString()}円
+                                </div>
+                            </>
+                        )}
                     </div>
                 </div>
 

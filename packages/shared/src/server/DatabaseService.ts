@@ -44,6 +44,10 @@ export class DatabaseService {
         return this.refreshCache();
     }
 
+    // --- CRUD Operations (Write-through) ---
+
+    // ... (getAllData calls refreshCache)
+
     /**
      * Read directly from Sheets and update the cache.
      */
@@ -83,7 +87,8 @@ export class DatabaseService {
                         type: String(row[3]) as any,
                         categoryId: String(row[4]),
                         description: String(row[5]),
-                        counterparty: String(row[6])
+                        counterparty: String(row[6]),
+                        receiptUrl: row[7] ? String(row[7]) : undefined
                     });
                 }
             }
@@ -99,6 +104,8 @@ export class DatabaseService {
         return appData;
     }
 
+    // ... (saveCache, formatDate helper omitted/kept)
+
     private saveCache(data: AppData) {
         const json = JSON.stringify(data);
         if (this.cacheFileId) {
@@ -113,8 +120,6 @@ export class DatabaseService {
         return Utilities.formatDate(date, 'Asia/Tokyo', 'yyyy-MM-dd');
     }
 
-    // --- CRUD Operations (Write-through) ---
-
     public addTransaction(transaction: Transaction): void {
         this.validateRelation(transaction);
 
@@ -122,8 +127,11 @@ export class DatabaseService {
         let sheet = ss.getSheetByName(TRANSACTIONS_SHEET_NAME);
         if (!sheet) {
             sheet = ss.insertSheet(TRANSACTIONS_SHEET_NAME);
-            sheet.appendRow(['id', 'date', 'amount', 'type', 'categoryId', 'description', 'counterparty']);
+            sheet.appendRow(['id', 'date', 'amount', 'type', 'categoryId', 'description', 'counterparty', 'receiptUrl']);
         }
+
+        // Check header column count to auto-expand schema if needed (optional optimization, but simple append is safer)
+        // If sheet exists but assumes 7 cols, appendRow with 8 args will extend it.
 
         sheet.appendRow([
             transaction.id,
@@ -132,7 +140,8 @@ export class DatabaseService {
             transaction.type,
             transaction.categoryId,
             transaction.description,
-            transaction.counterparty
+            transaction.counterparty,
+            transaction.receiptUrl || ''
         ]);
 
         // Update cache
@@ -150,18 +159,6 @@ export class DatabaseService {
     public updateTransaction(transaction: Transaction): void {
         this.validateRelation(transaction);
 
-        // Strategy: Read all, update in memory, write back all (Safe for consistency)
-        // Optimization: Could use Row Index if we tracked it, but ID lookup is safer for concurrent edits
-        const data = this.refreshCache(); // Force refresh to get latest state
-        const index = data.transactions.findIndex(t => t.id === transaction.id);
-
-        if (index === -1) {
-            throw new Error(`Transaction not found: ${transaction.id}`);
-        }
-
-        // Update in memory array (for cache consistency mostly, but we will reload from sheet to be safe or write back)
-        // Actually, to write back to sheet, we need to find the ROW.
-        // Let's iterate sheet to find the row.
         const ss = this.getSpreadsheet();
         const sheet = ss.getSheetByName(TRANSACTIONS_SHEET_NAME);
         if (!sheet) throw new Error("Transaction sheet missing");
@@ -182,14 +179,16 @@ export class DatabaseService {
             throw new Error(`Transaction row not found: ${transaction.id}`);
         }
 
-        // Update Row
-        sheet.getRange(rowIndex, 2, 1, 6).setValues([[
+        // Update Row (Cols 2-8: Date, Amount, Type, Category, Desc, Counterpy, Receipt)
+        // Note: Col 2 is B. Range(row, 2, 1, 7)
+        sheet.getRange(rowIndex, 2, 1, 7).setValues([[
             transaction.date,
             transaction.amount,
             transaction.type,
             transaction.categoryId,
             transaction.description,
-            transaction.counterparty
+            transaction.counterparty,
+            transaction.receiptUrl || ''
         ]]);
 
         this.refreshCache();
@@ -220,7 +219,7 @@ export class DatabaseService {
         this.refreshCache();
     }
 
-    // --- Category CRUD ---
+    // --- Category CRUD (Kept same) ---
 
     public addCategory(category: Category): void {
         const ss = this.getSpreadsheet();
@@ -304,7 +303,7 @@ export class DatabaseService {
         } else {
             transSheet = ss.insertSheet(TRANSACTIONS_SHEET_NAME);
         }
-        transSheet.appendRow(['id', 'date', 'amount', 'type', 'categoryId', 'description', 'counterparty']);
+        transSheet.appendRow(['id', 'date', 'amount', 'type', 'categoryId', 'description', 'counterparty', 'receiptUrl']);
         if (transactions.length > 0) {
             const transRows = transactions.map(t => [
                 t.id,
@@ -313,12 +312,53 @@ export class DatabaseService {
                 t.type,
                 t.categoryId,
                 t.description,
-                t.counterparty
+                t.counterparty,
+                t.receiptUrl || ''
             ]);
-            transSheet.getRange(2, 1, transRows.length, 7).setValues(transRows);
+            transSheet.getRange(2, 1, transRows.length, 8).setValues(transRows);
         }
 
         // 3. Update Cache
         this.refreshCache();
     }
+
+    public ensureHeaders(): void {
+        const ss = this.getSpreadsheet();
+        let sheet = ss.getSheetByName(TRANSACTIONS_SHEET_NAME);
+        if (!sheet) {
+            this.seed([], []);
+            return;
+        }
+
+        const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn() || 1).getValues()[0].map(h => String(h));
+        const requiredHeaders = ['id', 'date', 'amount', 'type', 'categoryId', 'description', 'counterparty', 'receiptUrl'];
+
+        // Check for missing headers and append them
+        requiredHeaders.forEach((header, index) => {
+            // Simple check: if the column index is beyond existing headers, or if the header at that index doesn't match and we want to enforce it.
+            // But existing sheets might have different order? 
+            // marumie assumes fixed order in refreshCache (row[0]...row[7]).
+            // So we must ensure the headers are in these exact positions.
+
+            if (index >= headers.length) {
+                // Column missing entirely
+                sheet?.getRange(1, index + 1).setValue(header);
+            } else if (headers[index] !== header && index === 7 && header === 'receiptUrl') {
+                // Specific fix for the requested issue: if 8th col is missing or empty/different, set it.
+                // Be careful not to overwrite if user has custom columns.
+                // But for this apps script app, we own the schema.
+                if (headers[index] === '' || headers[index] === undefined) {
+                    sheet?.getRange(1, index + 1).setValue(header);
+                }
+            }
+        });
+
+        // Actually, safer logic for the specific request "receiptUrl missing":
+        if (headers.length < 8) {
+            sheet.getRange(1, 8).setValue('receiptUrl');
+        } else if (headers[7] === '') {
+            sheet.getRange(1, 8).setValue('receiptUrl');
+        }
+    }
+
 }

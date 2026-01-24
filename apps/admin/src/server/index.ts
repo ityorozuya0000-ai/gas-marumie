@@ -1,19 +1,21 @@
 import { DatabaseService, AppData, Transaction, Category } from '@marumie/shared';
+import { DriveService } from './DriveService';
+import { GeminiService } from './GeminiService';
+import { AdminApp } from './AdminApp';
 
+const app = new AdminApp();
+
+// Force update: Scopes v1.3
 /**
  * Serve the React SPA for Admin
  */
 export function doGet(e: any): GoogleAppsScript.HTML.HtmlOutput {
-    // Simple Auth Check: Only allow access if user is logged in (Google Account)
-    // For stricter access control, check specifically against a list of allowed emails.
+    // ...
+    // Simple Auth Check
     const email = Session.getActiveUser().getEmail();
     if (!email) {
         return HtmlService.createHtmlOutput('Access Denied. Please log in with your Google Account.');
     }
-
-    // Optional: Check against allowed list
-    // const ALLOWED_USERS = ['your-email@example.com'];
-    // if (!ALLOWED_USERS.includes(email)) return HtmlService.createHtmlOutput('Access Denied.');
 
     return HtmlService.createHtmlOutputFromFile('index')
         .setTitle('Marumie Admin')
@@ -23,100 +25,28 @@ export function doGet(e: any): GoogleAppsScript.HTML.HtmlOutput {
 }
 
 /**
- * API: Get Initial Data
+ * DEBUG: Run this function in GAS Editor to force Authorization for new scopes.
  */
-export function getInitialData(): AppData {
-    checkAuth();
-    try {
-        const id = getSpreadsheetId();
-        if (!id) return { transactions: [], categories: [], lastUpdated: '' };
-        const db = new DatabaseService(id);
-        return db.getAllData();
-    } catch (e) {
-        console.error(e);
-        throw e;
-    }
+export function forceAuth() {
+    console.log('Current User:', Session.getActiveUser().getEmail());
+    console.log('Testing DriveApp...');
+    DriveApp.getRootFolder();
+    console.log('Testing UrlFetchApp...');
+    UrlFetchApp.fetch('https://www.google.com'); // This triggers the external_request scope
+    console.log('Auth OK!');
 }
 
-/**
- * API: Add Transaction
+/*
+ * API Entry Points (Delegated to AdminApp)
  */
-export function addTransaction(transaction: Transaction): AppData {
-    checkAuth();
-    const id = getSpreadsheetId();
-    if (!id) throw new Error("Spreadsheet ID not configured.");
 
-    const db = new DatabaseService(id);
-    db.addTransaction(transaction);
-    return db.getAllData();
-}
-
-/**
- * API: Update Transaction
- */
-export function updateTransaction(transaction: Transaction): AppData {
-    checkAuth();
-    const id = getSpreadsheetId();
-    if (!id) throw new Error("Spreadsheet ID not configured.");
-
-    const db = new DatabaseService(id);
-    db.updateTransaction(transaction);
-    return db.getAllData();
-}
-
-/**
- * API: Delete Transaction
- */
-export function deleteTransaction(transactionId: string): AppData {
-    checkAuth();
-    const id = getSpreadsheetId();
-    if (!id) throw new Error("Spreadsheet ID not configured.");
-
-    const db = new DatabaseService(id);
-    db.deleteTransaction(transactionId);
-    return db.getAllData();
-}
-
-/**
- * API: Category Operations
- */
-export function addCategory(category: any): any {
-    checkAuth();
-    const id = getSpreadsheetId();
-    if (!id) throw new Error("ID not configured");
-    const db = new DatabaseService(id);
-    db.addCategory(category);
-    return db.getAllData();
-}
-
-export function updateCategory(category: any): any {
-    checkAuth();
-    const id = getSpreadsheetId();
-    if (!id) throw new Error("ID not configured");
-    const db = new DatabaseService(id);
-    db.updateCategory(category);
-    return db.getAllData();
-}
-
-export function deleteCategory(id: string): any {
-    checkAuth();
-    const idStr = getSpreadsheetId();
-    if (!idStr) throw new Error("ID not configured");
-    const db = new DatabaseService(idStr);
-    db.deleteCategory(id);
-    return db.getAllData();
-}
-
-/**
- * Helper to get ID from Script Properties
- */
-function getSpreadsheetId(): string | null {
-    return PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID') || null;
-}
-
-function checkAuth() {
-    const email = Session.getActiveUser().getEmail();
-    if (!email) {
-        throw new Error('Access Denied');
-    }
-}
+export function saveSettings(settings: any) { return app.saveSettings(settings); }
+export function getSettings() { return app.getSettings(); }
+export function processReceiptImage(base64Data: string, mimeType: string) { return app.processReceiptImage(base64Data, mimeType); }
+export function getInitialData() { return app.getInitialData(); }
+export function addTransaction(data: any) { return app.addTransaction(data); }
+export function updateTransaction(data: any) { return app.updateTransaction(data); }
+export function deleteTransaction(id: string) { return app.deleteTransaction(id); }
+export function addCategory(data: any) { return app.addCategory(data); }
+export function updateCategory(data: any) { return app.updateCategory(data); }
+export function deleteCategory(id: string) { return app.deleteCategory(id); }

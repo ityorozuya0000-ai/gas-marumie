@@ -14,10 +14,13 @@ export interface Transaction {
     categoryId: string;
     description: string;
     counterparty: string; // 相手方
+    receiptUrl?: string; // レシート画像URL
 }
 
 export interface AppData {
     transactions: Transaction[];
     categories: Category[];
     lastUpdated: string;
+    hasApiKey?: boolean;
+    appTitle?: string;
 }

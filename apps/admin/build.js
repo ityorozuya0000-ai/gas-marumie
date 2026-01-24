@@ -69,6 +69,10 @@ function deleteTransaction(id) { return _global.deleteTransaction(id); }
 function addCategory(data) { return _global.addCategory(data); }
 function updateCategory(data) { return _global.updateCategory(data); }
 function deleteCategory(id) { return _global.deleteCategory(id); }
+function saveSettings(settings) { return _global.saveSettings(settings); }
+function getSettings() { return _global.getSettings(); }
+function processReceiptImage(base64Data, mimeType) { return _global.processReceiptImage(base64Data, mimeType); }
+function forceAuth() { return _global.forceAuth(); }
         `,
   },
   target: 'es2019',

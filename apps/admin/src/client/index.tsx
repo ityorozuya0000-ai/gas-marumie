@@ -5,6 +5,7 @@ import { AppData, Transaction, Category } from '@marumie/shared';
 import { Layout } from './components/Layout';
 import { TransactionView } from './components/TransactionView';
 import { SettingsModal } from './components/SettingsModal';
+import { LoadingOverlay } from './components/LoadingOverlay';
 
 // --- Mocks & Utilities ---
 const runGoogleScript = (name: string, args: any[] = []): Promise<any> => {
@@ -208,13 +209,9 @@ const App = () => {
 
     const runScript = (name: string, args: any[] = []) => runGoogleScript(name, args);
 
-    if (loading && !data) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-slate-100">
-                <div className="text-xl font-bold text-slate-500 animate-pulse">Loading...</div>
-            </div>
-        );
-    }
+    // Use overlay for all loading states including initial load
+    // if (loading && !data) ... removed to use overlay
+
 
     return (
         <>
@@ -245,6 +242,7 @@ const App = () => {
                 onClose={() => setIsSettingsOpen(false)}
                 runScript={runScript}
             />
+            <LoadingOverlay isVisible={loading} />
         </>
     );
 };
